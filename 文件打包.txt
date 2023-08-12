@@ -1,0 +1,11 @@
+有控制台窗口：
+pyinstaller -F ServerView.py
+pyinstaller -F Server.py
+
+无控制台窗口：
+pyinstaller -F -w ServerView.py
+pyinstaller -F -w Server.py
+
+无控制台窗口+有图标
+pyinstaller -F -w -i ServerView.ico ServerView.py
+pyinstaller -F -w -i Server.ico Server.py
