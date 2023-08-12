@@ -12,8 +12,6 @@ def GetLocalIP():
     ip_address = socket.gethostbyname(host_name)
     return ip_address
 
-# local_ip = GetLocalIP()
-# print("本机IP地址:", local_ip)
 
 MAX_TIMEOUT = 1 # 最大超时时间(s)
 MAX_INFOMATION = 15 # 最大信息个数
@@ -25,7 +23,7 @@ class Server_View():
     def __init__(self) -> None:
         self.host_ip = GetLocalIP()
         self.port = '5000'
-        self.version = 'v1.0.0-alpha'
+        self.version = 'v1.0.0-beta'
 
         self.window = tk.Tk()
         self.window.title(f'新生报到材料辅助收集系统服务端 {self.version}')
@@ -35,8 +33,8 @@ class Server_View():
         self.needful_infomation = [ # 需要提交的材料信息列表
             '户口本','毕业证','学位证','照片','体检表','党团关系证明','学籍证明','学生证'
             ]
+        self.data_frame = pd.DataFrame() # 用于存储数据的DataFrame        
         self.connect_state = DISCONNECTED # 连接状态
-        
         
         self.CreateWidgets()
     
@@ -80,8 +78,87 @@ class Server_View():
             relief="groove",
             )
         self.Frame_DataTable.place(x=140, y=120, width=550, height=450)
+        self.CreateWidgets_Frame_DataTable()
+    
+    def CreateWidgets_Frame_DataTable(self):
+        self.TreeView_DataFrame = tkinter.ttk.Treeview(
+            self.Frame_DataTable, 
+            columns=["1", "2", "3"],
+            show='headings'
+            )
+        self.TreeView_DataFrame.place(x=5, y=5, width=510, height=410)
+        
+        # 创建Scrollbar组件
+        self.Scrollbar_DataFrame = tk.Scrollbar(self.Frame_DataTable)
+        self.Scrollbar_DataFrame.place(x=515, y=5, width=20, height=410)
+        # 绑定Scrollbar和Treeview
+        self.Scrollbar_DataFrame.config(command=self.TreeView_DataFrame.yview)
+        self.TreeView_DataFrame.configure(yscrollcommand=self.Scrollbar_DataFrame.set)
+        
+        
+        self.AddTestDataToTreeView()
+        # self.UpdateTreeView()
+        
+    def AddTestDataToTreeView(self):
+        # 设置列标题
+        self.TreeView_DataFrame.heading("1", text="姓名")
+        self.TreeView_DataFrame.heading("2", text="身份证号")
+        self.TreeView_DataFrame.heading("3", text="学号")
+        # 设置列的宽度
+        self.TreeView_DataFrame.column("1", width=50, anchor='center')
+        self.TreeView_DataFrame.column("2", width=50, anchor='center')
+        self.TreeView_DataFrame.column("3", width=50, anchor='center')
+
+        # 插入行数据
+        for i in range(10):
+            self.TreeView_DataFrame.insert("", "end", values=("123", "123", "666"))
+            self.TreeView_DataFrame.insert("", "end", values=("222", "333", "444"))
+            self.TreeView_DataFrame.insert("", "end", values=("454", "154", "143"))
+            self.TreeView_DataFrame.insert("", "end", values=["114", "312", "214"])
+        self.TreeView_DataFrame.insert("", "end", values=("114"))
+        self.TreeView_DataFrame.insert("", 2, values=("数据1", "数据2", "数据3"))
+
+        # self.SwapColumns(1,3)#第一列为1
+        # self.TreeView_DataFrame.delete(*self.TreeView_DataFrame.get_children())
+        
+    
+    def SwapColumns(self, column1:int, column2:int):
+        '''交换TreeView两列的数据'''
+        items = self.TreeView_DataFrame.get_children()
+        for item in items:
+            values = list(self.TreeView_DataFrame.item(item, "values"))  # 将元组转换为列表
+            values[column1-1], values[column2-1] = values[column2-1], values[column1-1]
+            self.TreeView_DataFrame.item(item, values=tuple(values))  # 将列表转换回元组
+            
+        # 获取列1的标题和宽度
+        heading1 = self.TreeView_DataFrame.heading(column1, "text")
+        width1 = self.TreeView_DataFrame.column(column1, "width")
+
+        # 获取列2的标题和宽度
+        heading2 = self.TreeView_DataFrame.heading(column2, "text")
+        width2 = self.TreeView_DataFrame.column(column2, "width")
+
+        # 设置列1的标题和宽度为列2的值
+        self.TreeView_DataFrame.heading(column1, text=heading2)
+        self.TreeView_DataFrame.column(column1, width=width2)
+
+        # 设置列2的标题和宽度为列1的值
+        self.TreeView_DataFrame.heading(column2, text=heading1)
+        self.TreeView_DataFrame.column(column2, width=width1)
     
     
+    def AddNewColumn(self, column_name:str):
+        pass
+    
+    
+    def ChangeColumnName(self, column_name:str):
+        pass
+    
+    
+    def DeleteColumn(self, column_name:str):
+        pass
+    
+        
     def CreateWidgets_Frame_OperationBar(self):
         button_width = 105
         button_height = 30
@@ -89,7 +166,7 @@ class Server_View():
             self.Frame_OperationBar,
             text='更新数据表格',
             font=('微软雅黑',10),
-            command=self.BlankFunction,
+            command=self.Button_UpdateDataTable_Click,
             )
         self.Button_UpdateDataTable.place(x=5, y=0, width=button_width, height=button_height)
         
@@ -97,11 +174,143 @@ class Server_View():
             self.Frame_OperationBar,
             text='恢复备份数据',
             font=('微软雅黑',10),
-            command=self.BlankFunction,
+            command=self.Button_Recover_Click,
             )
         self.Button_Recover.place(x=5, y=int(button_height*1.2), width=button_width, height=button_height)
-        
-        
+
+
+    def UpdateTreeView(self):
+        #直接无脑更新控件算了
+        column_names = self.data_frame.columns.tolist()
+        self.TreeView_DataFrame = tkinter.ttk.Treeview(
+            self.Frame_DataTable, 
+            columns=column_names,
+            show='headings'
+            )
+        self.TreeView_DataFrame.place(x=5, y=5, width=450, height=350)
+        # 绑定Scrollbar和Treeview
+        self.Scrollbar_DataFrame.config(command=self.TreeView_DataFrame.yview)
+        self.TreeView_DataFrame.configure(yscrollcommand=self.Scrollbar_DataFrame.set)
+        for i,column_name in enumerate(column_names,0):
+            #更新列名
+            self.TreeView_DataFrame.heading(i, text=column_name)
+            self.TreeView_DataFrame.column(i, width=50, anchor='center')
+        for i in range(self.data_frame.shape[0]):
+            #添加行信息
+            row = self.data_frame.iloc[i].to_list()
+            self.TreeView_DataFrame.insert("", "end", values=row)
+        # #第1步，清除原有数据
+        # self.TreeView_DataFrame.delete(*self.TreeView_DataFrame.get_children())
+        # #第2部，检查列名是否匹配
+        # data_frame_column_names = self.data_frame.columns.tolist()
+        # TreeView_column_names = []
+        # for column_id in self.TreeView_DataFrame["columns"]:#获取TreeView的所有列名
+        #     column_name = self.TreeView_DataFrame.heading(column_id, "text")
+        #     TreeView_column_names.append(column_name)
+        # print('\n\n')
+        # print(TreeView_column_names)
+        # print(data_frame_column_names)
+        # if TreeView_column_names == data_frame_column_names:
+        #     for i in range(self.data_frame.shape[0]):
+        #         row = self.data_frame.iloc[i].to_list()
+        #         self.TreeView_DataFrame.insert("", "end", values=row)#将数据添加到TreeView中
+        # else:
+        #     # 先不搞什么优化了，直接无脑清零，重新标列，然后添加数据内容
+        #     # 直接无脑赋值算了
+        #     # for i,column_name in enumerate(data_frame_column_names,1):
+        #     for i in range(max(TreeView_column_names.__len__(),data_frame_column_names.__len__())):
+        #         if i < data_frame_column_names.__len__():
+        #             column_name = data_frame_column_names[i]
+        #             self.TreeView_DataFrame.column(i, width=50, anchor='center')
+        #             self.TreeView_DataFrame.heading(i, text=column_name)
+        #         else:
+        #             #删除多余的列
+        #     # if TreeView_column_names.__len__() > data_frame_column_names.__len__():#如果TreeView的列数比DataFrame的列数多就删除多余的
+        #     #     #TODO:删除多余的列
+        #     #     pass
+        #     # # elif TreeView_column_names.__len__() < data_frame_column_names.__len__():#如果TreeView的列数比DataFrame的列数少就添加少的
+        #     # else:
+        #     #     #TODO:添加缺少的列
+        #     #     for i,column_name in enumerate(data_frame_column_names,1):
+        #     #         # if i <= TreeView_column_names.__len__():#给已有的列更换列名
+        #     #         #     self.TreeView_DataFrame.heading(i, text=column_name)
+        #     #         # else:#添加新的列
+        #     #         #     self.TreeView_DataFrame.column(i, width=50, anchor='center')
+        #     #         #     self.TreeView_DataFrame.heading(i, text=column_name)
+                    
+        #     #         #或许可以直接无脑赋值
+        #     #         self.TreeView_DataFrame.column(i, width=50, anchor='center')
+        #     #         self.TreeView_DataFrame.heading(i, text=column_name)
+                    
+        #     # # else:#相同时直接更换列名（）考虑合并到上面
+        #     # #     pass
+    
+    
+    def Button_UpdateDataTable_Click(self):
+        '''TODO:更新Server返回的json数据，以符合json'''
+        if self.connect_state == DISCONNECTED:
+            tkinter.messagebox.showwarning(title='提示', message='服务未开启！')
+            return
+        elif self.connect_state == CONNECTED:
+            #方案1：直接通过网络与服务器在本地传输表格
+            #方案2：从本地的备份文件中加载表格
+            #目前使用的是方案1
+            # try:
+            if 1:
+                response = requests.get(
+                    f'http://127.0.0.1:5000/get_data_sheet',
+                    timeout=MAX_TIMEOUT
+                    )
+                print(response.status_code)
+                print(type(response.status_code))
+                if response.status_code == 200:
+                    json = response.json()
+                    #将数据按照原来的列顺序恢复成pandas数据表
+                    columns = json['columns']
+                    dict_by_columns_json = json['dict_by_columns']
+                    dict_by_columns = {}
+                    for column in columns:
+                        dict_by_columns[column] = dict_by_columns_json[column]
+                    self.data_frame = pd.DataFrame(dict_by_columns)
+                    print(columns)
+                    print(self.data_frame)
+                    
+                    #将数据表格显示到TreeView中
+                    self.UpdateTreeView()
+                    tkinter.messagebox.showinfo(title='提示', message='数据更新成功！')
+                else:
+                    tkinter.messagebox.showerror(title='错误', message='数据更新失败！')
+            # except:
+            #     tkinter.messagebox.showerror(title='错误', message='数据更新失败！')
+
+
+    def Button_Recover_Click(self):
+        if self.connect_state == DISCONNECTED:
+            tkinter.messagebox.showwarning(title='提示', message='服务未开启！')
+            return
+        elif self.connect_state == CONNECTED:
+            try:
+                response = requests.get(
+                    f'http://127.0.0.1:5000/recover'
+                    )
+                if response.status_code == 200:
+                    json = response.json()
+                    self.needful_infomation = json['needful_infomation']
+                    self.Combobox_NeedfulInfomation.configure(values=self.needful_infomation)
+                    if self.needful_infomation.__len__()>0:
+                        self.Combobox_NeedfulInfomation.set(self.needful_infomation[0])
+                    else:
+                        self.Combobox_NeedfulInfomation.set('')
+                        
+                    print(json['needful_infomation'])
+                    tkinter.messagebox.showinfo(title='提示', message='备份恢复成功！')
+                else:
+                    tkinter.messagebox.showerror(title='错误', message='备份恢复失败！')
+            except:
+                tkinter.messagebox.showerror(title='错误', message='备份恢复失败！')
+                
+    
+    
     def CreateWidgets_Frame_Settings(self):
         self.LabelPrompt_NeedfulInfomation = tk.Label(#用于显示提示需要提交的材料类型
             self.Frame_Settings,
@@ -119,6 +328,7 @@ class Server_View():
                         state='normal'
                     )
         self.Combobox_NeedfulInfomation.place(x=140, y=0, width=120, height=20)
+        self.Combobox_NeedfulInfomation.configure(height=5)#设置下拉列表显示5个选项
         if self.needful_infomation.__len__()>0:
             self.Combobox_NeedfulInfomation.set(self.needful_infomation[0])
         self.Combobox_NeedfulInfomation.bind("<Return>", self.Combobox_NeedfulInfomation_OnReturn)#按回车键增加内容
@@ -267,7 +477,8 @@ class Server_View():
                 self.connect_state = DISCONNECTED
             self.SetConnectState()
             if self.connect_state == CONNECTED:
-                self.window.after(5000, self.Button_ConnectToServer_Click)#每隔xs自动检测一次连接状态
+                #后面别忘了改回5000
+                self.window.after(60000, self.Button_ConnectToServer_Click)#每隔xs自动检测一次连接状态
         except:
             self.connect_state = DISCONNECTED
             self.SetConnectState()

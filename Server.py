@@ -20,6 +20,7 @@ def description():
     
 #所有数据均以字符串储存
 app = Flask(__name__)
+version = 'v1.0.0-beta'
 needful_infomation = [] # 需要提交的材料信息列表
 needful_infomation = ['户口本','毕业证','学位证']#,'照片','体检表','党团关系证明','学籍证明','学生证']
 data_dict_initial = {
@@ -49,7 +50,7 @@ def Init():
 
 def Backup():
     '''备份数据'''
-    data_frame.to_excel(AppPath()+'/backup.xlsx', sheet_name='Sheet1')   
+    data_frame.to_excel(AppPath()+'/backup.xlsx', sheet_name='Sheet1', index=False)   
     return
 
 
@@ -165,30 +166,49 @@ def GetInfomation():
 @app.route('/get_data_sheet', methods=['GET'])
 def GetDataSheet():
     '''获取所有对象材料收集情况的数据表格'''
-    return "This is a GET request."
+    global data_frame
+    # 将DataFrame转换为字典
+    dict_by_columns = data_frame.to_dict()
+    json = {
+        'columns':data_frame.columns.tolist(),#为了防止顺序错乱，这里将列名单独传输，后续依照这个顺序复原
+        'dict_by_columns':dict_by_columns
+    }
+    return jsonify(json)
 
 
-@app.route('/recovery', methods=['PSOT'])
-def Recovery():
+@app.route('/recover', methods=['GET'])
+def Recover():
     '''恢复备份的数据信息'''
-    return "Data have been recovered."
+    global data_frame, needful_infomation
+    data_frame_backup = pd.read_excel(AppPath()+'/backup.xlsx', dtype=str)
+    print('')
+    print('')
+    print('')
+    print(data_frame_backup)
+    print('')
+    print('')
+    print('')
+    data_frame = data_frame_backup
+    columns = data_frame.columns.tolist()
+    needful_infomation = columns[3:]
+    json = {'needful_infomation':needful_infomation}
+    return jsonify(json)
 
 
 @app.route('/set', methods=['POST'])
 def Set():
-    '''TODO:根据更新的信息对原有的列进行增减'''
     '''设置需要提交的材料信息'''
-    global needful_infomation
+    global needful_infomation,data_frame
     needful_infomation_tmp = request.json['needful_info']
     for nf in needful_infomation_tmp:
         if nf not in needful_infomation:
-            needful_infomation.append(nf)
-            #TODO（小企鹅）：在数据表格中增加一列
+            new_column = ['0']*data_frame.shape[0]
+            data_frame[nf] = new_column #在数据表格中增加一列
     for nf in needful_infomation:
         if nf not in needful_infomation_tmp:
-            needful_infomation.append(nf)
-            #TODO（小企鹅）：在数据表格中删除一列
+            del data_frame[nf]#在数据表格中删除一列
     needful_infomation = needful_infomation_tmp.copy()
+    print(data_frame)
     return "Server is setted."
 
 
@@ -196,5 +216,8 @@ def Set():
 
 if __name__ == '__main__':
     Init()
-    print('\n\n\n欢迎使用新生报到材料收集系统！\n\n\n')
+    print('\n\n\n')
+    print('欢迎使用新生报到材料收集系统！')
+    print(version)
+    print('\n\n\n')
     app.run(host="0.0.0.0",port=5000)#,debug=True)
